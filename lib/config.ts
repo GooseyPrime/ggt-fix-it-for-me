@@ -6,6 +6,7 @@ export const TOOL_NAME = "Fix It For Me";
 /** Ember — Cos accent for this tool. */
 export const ACCENT = "#b4553f";
 
+/** Registry listing flag — stays false until Brandon lists after stranger smoke. */
 export const LIVE = false;
 
 type Env = Record<string, string | undefined>;
@@ -31,18 +32,23 @@ export function shopOrigin(env: Env = publicEnv()): string | null {
 
 /**
  * Products the shop sale desk currently accepts.
- * TODAY: seo-audit|accessibility only. Until `fix-it` appears, checkout must refuse —
- * never fall through (sending fix-it would be priced as SEO $29).
+ * Default matches shop main `SALE_PRODUCT_IDS` after #43 (includes fix-it).
+ * Override with NEXT_PUBLIC_SHOP_SALE_PRODUCTS if needed. Never fall through to seo-audit.
  */
 export function shopSaleProducts(env: Env = publicEnv()): Set<string> {
   const raw = env.NEXT_PUBLIC_SHOP_SALE_PRODUCTS?.trim();
-  const list = (raw && raw.length > 0 ? raw : "seo-audit,accessibility")
+  const list = (
+    raw && raw.length > 0
+      ? raw
+      : "seo-audit,accessibility,fix-it,a11y-statement,quote-invoice,chat-to-pdf,cottage-food-labels,maker-label-pack,listing-optimizer,domain-ssl-report"
+  )
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
   return new Set(list);
 }
 
+/** Paid path unlocks only when fix-it is on the sale allowlist. */
 export function fixItSaleLive(env: Env = publicEnv()): boolean {
   return shopSaleProducts(env).has(TOOL_ID);
 }
