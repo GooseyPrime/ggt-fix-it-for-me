@@ -108,6 +108,23 @@ describe("verifySale", () => {
     expect(result.kind).toBe("invalid_product");
   });
 
+  it("accepts confirmed paid sessions when the shop omits echoed product metadata", async () => {
+    process.env.NEXT_PUBLIC_SHOP_ORIGIN = "https://shop.example";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ ok: true, paid: true }), {
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+
+    const result = await verifySale("sess_123");
+
+    expect(result.ok).toBe(true);
+    expect(result.paid).toBe(true);
+  });
+
   it("requires ok=true for ordinary paid unlocks but preserves the no_payment_required path", async () => {
     process.env.NEXT_PUBLIC_SHOP_ORIGIN = "https://shop.example";
     vi.stubGlobal(

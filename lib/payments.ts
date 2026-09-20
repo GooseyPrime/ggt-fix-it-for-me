@@ -238,7 +238,7 @@ function matchesTool(data: Record<string, unknown>): boolean {
     asString(metadata?.toolId) ??
     asString(metadata?.tool_id);
 
-  if (!product && !toolId) return false;
+  if (!product && !toolId) return true;
   if (product && product !== TOOL_ID) return false;
   if (toolId && toolId !== TOOL_ID) return false;
   return true;

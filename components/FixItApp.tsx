@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ACCENT, TOOL_NAME, fixItSaleLive, publicBasePath } from "@/lib/config";
 import { anyPriceConfigured, shopPrices, variantPrice } from "@/lib/prices";
 import type { AuditResult, Bucket, PriceTiers, VariantId } from "@/lib/types";
@@ -22,6 +22,7 @@ export function defaultVariantId(prices: PriceTiers): VariantId {
 }
 
 export function FixItApp() {
+  const resultsRef = useRef<HTMLElement | null>(null);
   const [url, setUrl] = useState("");
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
@@ -115,7 +116,10 @@ export function FixItApp() {
       }
       setResult(json as AuditResult);
       setTimeout(
-        () => document.getElementById("fifm-results")?.scrollIntoView({ behavior: "smooth" }),
+        () => {
+          resultsRef.current?.scrollIntoView({ behavior: "smooth" });
+          resultsRef.current?.focus();
+        },
         50,
       );
     } catch (err) {
@@ -204,7 +208,7 @@ export function FixItApp() {
         ) : null}
 
         {result ? (
-          <section className="ggt-result" id="fifm-results">
+          <section className="ggt-result" id="fifm-results" ref={resultsRef} tabIndex={-1}>
             <p className="fifm-pill">{result.platformLabel}</p>
             <h2 style={{ marginTop: 0 }}>{result.summary}</h2>
             {result.fetchNote ? <p className="fifm-note">{result.fetchNote}</p> : null}

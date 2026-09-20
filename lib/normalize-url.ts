@@ -1,5 +1,4 @@
 const SCHEME = /^(https?:\/\/)/i;
-const WRAPS = /^[\s<"'\[]+|[\s>"'\]]+$/g;
 const DOMAIN =
   /(?:https?:\/\/)?(?:www\.)?[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])+){1,}(?::\d{2,5})?(?:\/[^\s<>"'`]*)?/i;
 
@@ -23,7 +22,7 @@ export function canonicalizeHost(host: string): string {
 }
 
 export function extractUrlCandidate(raw: string): string {
-  const stripped = raw.replace(WRAPS, "").replace(/\u00a0/g, " ").trim();
+  const stripped = stripWrappedText(raw);
   if (!stripped) return "";
   const match = stripped.match(DOMAIN);
   if (match?.[0]) return match[0];
@@ -143,4 +142,29 @@ function firstWhitespaceToken(value: string): string {
     }
   }
   return value;
+}
+
+function stripWrappedText(raw: string): string {
+  const normalized = raw.split("\u00a0").join(" ");
+  let start = 0;
+  let end = normalized.length;
+
+  while (start < end && isWrapperChar(normalized.charCodeAt(start), true)) {
+    start += 1;
+  }
+  while (end > start && isWrapperChar(normalized.charCodeAt(end - 1), false)) {
+    end -= 1;
+  }
+
+  return normalized.slice(start, end).trim();
+}
+
+function isWrapperChar(code: number, opening: boolean): boolean {
+  if (code === 9 || code === 10 || code === 11 || code === 12 || code === 13 || code === 32) {
+    return true;
+  }
+  if (opening) {
+    return code === 60 || code === 34 || code === 39 || code === 91;
+  }
+  return code === 62 || code === 34 || code === 39 || code === 93;
 }

@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
   const url = typeof body.url === "string" ? body.url.trim() : "";
   const returnUrl = typeof body.returnUrl === "string" ? body.returnUrl.trim() : "";
-  const variant: VariantId = body.variant === "plus" ? "plus" : "standard";
+  const variant = body.variant;
 
   if (!returnUrl) {
     return NextResponse.json({ ok: false, message: "Missing return URL." }, { status: 400 });
@@ -38,10 +38,13 @@ export async function POST(request: Request) {
   if (!url) {
     return NextResponse.json({ ok: false, message: "Missing website URL." }, { status: 400 });
   }
+  if (variant !== "standard" && variant !== "plus") {
+    return NextResponse.json({ ok: false, message: "Variant must be standard or plus." }, { status: 400 });
+  }
 
   const result = await startSale({
     url,
-    variant,
+    variant: variant as VariantId,
     returnUrl,
   });
 

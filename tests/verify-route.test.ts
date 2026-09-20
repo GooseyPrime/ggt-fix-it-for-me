@@ -9,6 +9,7 @@ vi.mock("@/lib/payments", () => ({
 }));
 
 import { GET, POST } from "@/app/api/verify/route";
+import { POST as salePost } from "@/app/api/sale/route";
 
 afterEach(() => {
   verifySaleMock.mockReset();
@@ -30,6 +31,24 @@ describe("/api/verify", () => {
       new Request("https://tool.example/api/verify", {
         method: "POST",
         body: JSON.stringify({}),
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    expect(response.status).toBe(400);
+  });
+});
+
+describe("/api/sale", () => {
+  it("rejects unknown variants instead of coercing them", async () => {
+    const response = await salePost(
+      new Request("https://tool.example/api/sale", {
+        method: "POST",
+        body: JSON.stringify({
+          url: "https://example.com",
+          variant: "enterprise",
+          returnUrl: "https://tool.example/tools/fix-it",
+        }),
         headers: { "Content-Type": "application/json" },
       }),
     );
