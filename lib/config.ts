@@ -60,5 +60,5 @@ export function normalizeBasePath(raw: string | undefined): string {
   const trimmed = raw?.trim() ?? "";
   if (!trimmed) return "";
   const withLeadingSlash = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  return withLeadingSlash.replace(/\/$/, "");
+  return withLeadingSlash.replace(/\/+$/, "");
 }

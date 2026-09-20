@@ -15,5 +15,8 @@ describe("normalizeUrl", () => {
     expect(normalizeUrl("https://metadata.google.internal./").error).toBeTruthy();
     expect(isBlockedHost("192.168.1.1")).toBe(true);
     expect(isBlockedHost("10.0.0.5")).toBe(true);
+    expect(isBlockedHost("::1")).toBe(true);
+    expect(isBlockedHost("fc00::1")).toBe(true);
+    expect(isBlockedHost("fe80::1")).toBe(true);
   });
 });

@@ -69,6 +69,27 @@ describe("startSale", () => {
     });
   });
 
+  it("rejects non-http checkout URLs from the shop response", async () => {
+    process.env.NEXT_PUBLIC_SHOP_SALE_PRODUCTS = "fix-it";
+    process.env.NEXT_PUBLIC_SHOP_ORIGIN = "https://goldengoosetools.com";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ checkoutUrl: "javascript:alert(1)" }), {
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+
+    const result = await startSale({
+      url: "https://example.com",
+      variant: "plus",
+      returnUrl: "https://tool.example/",
+    });
+
+    expect(result.ok).toBe(false);
+  });
+
   it("disables local unlock in production", async () => {
     process.env.NEXT_PUBLIC_SHOP_SALE_PRODUCTS = "fix-it";
     process.env.NEXT_PUBLIC_ALLOW_LOCAL_UNLOCK = "true";

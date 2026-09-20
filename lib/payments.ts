@@ -160,8 +160,9 @@ async function postSale(
     const data = await readJson(res);
     if (data && typeof data === "object") {
       const record = data as Record<string, unknown>;
-      const checkoutUrl =
-        asString(record.url) ?? asString(record.checkoutUrl) ?? asString(record.checkout_url);
+      const checkoutUrl = parseCheckoutUrl(
+        asString(record.url) ?? asString(record.checkoutUrl) ?? asString(record.checkout_url),
+      );
 
       if (res.ok && checkoutUrl && record.ok !== false) {
         return {
@@ -260,6 +261,19 @@ function asString(value: unknown): string | undefined {
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
+function parseCheckoutUrl(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return undefined;
+    }
+    return parsed.toString();
+  } catch {
+    return undefined;
+  }
 }
 
 async function fetchJson(

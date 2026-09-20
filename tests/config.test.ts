@@ -12,7 +12,7 @@ afterEach(() => {
 
 describe("publicBasePath", () => {
   it("normalizes the configured base path to an absolute app-relative path", () => {
-    process.env.NEXT_PUBLIC_BASE_PATH = "tools/fix-it/";
+    process.env.NEXT_PUBLIC_BASE_PATH = "tools/fix-it//";
     expect(publicBasePath()).toBe("/tools/fix-it");
   });
 });
