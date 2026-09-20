@@ -35,8 +35,8 @@ const LOCAL_SESSION = "local";
  * Start checkout via shop POST /api/sale.
  * Body: { url, product: "fix-it", toolId: "fix-it", variant: "standard"|"plus" }
  *
- * NEVER falls through to seo-audit / accessibility. Until the desk allowlist includes
- * fix-it, refuse here — otherwise the shop would price the session as SEO $29.
+ * Never falls through to seo-audit / accessibility. Refuses unless fix-it is on
+ * the sale allowlist (shop SALE_PRODUCT_IDS / NEXT_PUBLIC_SHOP_SALE_PRODUCTS).
  */
 export async function startSale(input: SaleRequest): Promise<SaleResult> {
   if (!fixItSaleLive()) {
@@ -44,7 +44,7 @@ export async function startSale(input: SaleRequest): Promise<SaleResult> {
       ok: false,
       code: "sku_not_live",
       message:
-        "Checkout for Fix It For Me is not live on the shop sale desk yet. The free three-way split still works. We will not send you through SEO Audit or Accessibility checkout (that would charge the wrong price).",
+        "Checkout for Fix It For Me is not on the shop sale allowlist yet. The free three-way split still works. We will not send you through SEO Audit or Accessibility checkout (that would charge the wrong price).",
     };
   }
 
@@ -63,7 +63,6 @@ export async function startSale(input: SaleRequest): Promise<SaleResult> {
     };
   }
 
-  // Exact shop sale contract after allowlist merges.
   const body = JSON.stringify({
     url: input.url,
     product: TOOL_ID,
