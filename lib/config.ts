@@ -53,5 +53,12 @@ export function allowLocalUnlock(env: Env = publicEnv()): boolean {
 }
 
 export function publicBasePath(env: Env = publicEnv()): string {
-  return env.NEXT_PUBLIC_BASE_PATH?.replace(/\/$/, "") ?? "";
+  return normalizeBasePath(env.NEXT_PUBLIC_BASE_PATH);
+}
+
+export function normalizeBasePath(raw: string | undefined): string {
+  const trimmed = raw?.trim() ?? "";
+  if (!trimmed) return "";
+  const withLeadingSlash = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return withLeadingSlash.replace(/\/$/, "");
 }

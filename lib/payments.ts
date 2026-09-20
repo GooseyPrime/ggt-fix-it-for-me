@@ -163,6 +163,14 @@ async function postSale(
       const checkoutUrl =
         asString(record.url) ?? asString(record.checkoutUrl) ?? asString(record.checkout_url);
 
+      if (res.ok && checkoutUrl && record.ok !== false) {
+        return {
+          ok: true,
+          checkoutUrl,
+          sessionId: asString(record.sessionId) ?? asString(record.session_id),
+        };
+      }
+
       if (!res.ok || record.ok === false) {
         return {
           ok: false,
@@ -173,13 +181,6 @@ async function postSale(
         };
       }
 
-      if (record.ok === true && checkoutUrl) {
-        return {
-          ok: true,
-          checkoutUrl,
-          sessionId: asString(record.sessionId) ?? asString(record.session_id),
-        };
-      }
       return {
         ok: false,
         code: "shop_error",

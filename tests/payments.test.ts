@@ -45,6 +45,30 @@ describe("startSale", () => {
     expect("checkoutUrl" in result).toBe(false);
   });
 
+  it("accepts a successful shop response that only returns a checkout URL", async () => {
+    process.env.NEXT_PUBLIC_SHOP_SALE_PRODUCTS = "fix-it";
+    process.env.NEXT_PUBLIC_SHOP_ORIGIN = "https://goldengoosetools.com";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ checkoutUrl: "https://shop.example/checkout" }), {
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+
+    const result = await startSale({
+      url: "https://example.com",
+      variant: "plus",
+      returnUrl: "https://tool.example/",
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      checkoutUrl: "https://shop.example/checkout",
+    });
+  });
+
   it("disables local unlock in production", async () => {
     process.env.NEXT_PUBLIC_SHOP_SALE_PRODUCTS = "fix-it";
     process.env.NEXT_PUBLIC_ALLOW_LOCAL_UNLOCK = "true";

@@ -28,7 +28,7 @@ export function extractUrlCandidate(raw: string): string {
   const match = stripped.match(DOMAIN);
   if (match?.[0]) return match[0];
   const firstToken = stripped.split(/\s+/)[0] ?? "";
-  return firstToken.replace(/[.,;:!?)]+$/g, "");
+  return trimTrailingPunctuation(firstToken);
 }
 
 export function isBlockedHost(host: string): boolean {
@@ -80,7 +80,7 @@ export function normalizeUrl(raw: string): NormalizedUrl {
     return { href: null, host: null, error: "Enter a website address." };
   }
 
-  let working = candidate.replace(/[.,;:!?)]+$/g, "");
+  let working = trimTrailingPunctuation(candidate);
   if (!SCHEME.test(working)) working = `https://${working}`;
 
   let parsed: URL;
@@ -118,4 +118,12 @@ export function normalizeUrl(raw: string): NormalizedUrl {
     candidate !== raw.trim() ? "Extra words around the address were ignored." : undefined;
 
   return { href, host, note };
+}
+
+function trimTrailingPunctuation(value: string): string {
+  let end = value.length;
+  while (end > 0 && ",.;:!?)".includes(value[end - 1] ?? "")) {
+    end -= 1;
+  }
+  return value.slice(0, end);
 }

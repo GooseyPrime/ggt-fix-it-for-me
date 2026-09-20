@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
+import { normalizeBasePath } from "./lib/config";
 
-const rawBase = process.env.NEXT_PUBLIC_BASE_PATH?.trim() ?? "";
-const basePath = rawBase.replace(/\/$/, "");
+const basePath = normalizeBasePath(process.env.NEXT_PUBLIC_BASE_PATH);
 
 const nextConfig: NextConfig = {
   basePath: basePath || undefined,
