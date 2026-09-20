@@ -12,6 +12,8 @@ type Env = Record<string, string | undefined>;
 
 function publicEnv(): Env {
   return {
+    NODE_ENV: process.env.NODE_ENV,
+    ALLOW_LOCAL_UNLOCK: process.env.ALLOW_LOCAL_UNLOCK,
     NEXT_PUBLIC_SHOP_ORIGIN: process.env.NEXT_PUBLIC_SHOP_ORIGIN,
     NEXT_PUBLIC_BASE_PATH: process.env.NEXT_PUBLIC_BASE_PATH,
     NEXT_PUBLIC_SHOP_SALE_PRODUCTS: process.env.NEXT_PUBLIC_SHOP_SALE_PRODUCTS,
@@ -46,7 +48,8 @@ export function fixItSaleLive(env: Env = publicEnv()): boolean {
 }
 
 export function allowLocalUnlock(env: Env = publicEnv()): boolean {
-  return env.NEXT_PUBLIC_ALLOW_LOCAL_UNLOCK === "true";
+  if (env.NODE_ENV === "production") return false;
+  return env.ALLOW_LOCAL_UNLOCK === "true" || env.NEXT_PUBLIC_ALLOW_LOCAL_UNLOCK === "true";
 }
 
 export function publicBasePath(env: Env = publicEnv()): string {

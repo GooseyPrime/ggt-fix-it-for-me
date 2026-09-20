@@ -1,8 +1,11 @@
-import { isBlockedHost, normalizeUrl } from "./normalize-url";
+import { lookup } from "node:dns/promises";
+import { isBlockedAddress, isBlockedHost, normalizeUrl } from "./normalize-url";
 
 const FETCH_MS = 10000;
 const UA = "GoldenGooseTools-FixItForMe/0.1 (+https://www.goldengoosetools.com)";
 const MAX_BYTES = 1_500_000;
+const MAX_REDIRECTS = 5;
+const BLOCKED_ERROR = "That address cannot be checked from this tool.";
 
 export type FetchedPage = {
   ok: boolean;
@@ -19,27 +22,7 @@ export async function fetchPage(rawUrl: string): Promise<FetchedPage> {
   }
 
   try {
-    const res = await fetch(normalized.href, {
-      method: "GET",
-      redirect: "follow",
-      headers: {
-        Accept: "text/html,application/xhtml+xml",
-        "User-Agent": UA,
-      },
-      signal: AbortSignal.timeout(FETCH_MS),
-    });
-
-    const finalUrl = res.url || normalized.href;
-    let finalHost: string;
-    try {
-      finalHost = new URL(finalUrl).hostname;
-    } catch {
-      return { ok: false, finalUrl: null, html: null, error: "That address cannot be checked from this tool." };
-    }
-
-    if (isBlockedHost(finalHost)) {
-      return { ok: false, finalUrl: null, html: null, error: "That address cannot be checked from this tool." };
-    }
+    const { res, finalUrl } = await fetchWithValidatedRedirects(normalized.href);
 
     if (!res.ok) {
       return {
@@ -62,9 +45,7 @@ export async function fetchPage(rawUrl: string): Promise<FetchedPage> {
       };
     }
 
-    const buf = await res.arrayBuffer();
-    const slice = buf.byteLength > MAX_BYTES ? buf.slice(0, MAX_BYTES) : buf;
-    const html = new TextDecoder("utf-8", { fatal: false }).decode(slice);
+    const html = await readLimitedText(res);
 
     return {
       ok: true,
@@ -72,13 +53,122 @@ export async function fetchPage(rawUrl: string): Promise<FetchedPage> {
       html,
       note: normalized.note,
     };
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
     return {
       ok: false,
       finalUrl: normalized.href,
       html: null,
-      error: "Could not reach that website. Check the address and try again.",
+      error: message === BLOCKED_ERROR ? BLOCKED_ERROR : "Could not reach that website. Check the address and try again.",
       note: normalized.note,
     };
   }
+}
+
+async function fetchWithValidatedRedirects(
+  inputUrl: string,
+): Promise<{ res: Response; finalUrl: string }> {
+  let currentUrl = inputUrl;
+
+  for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
+    await assertSafeDestination(currentUrl);
+
+    const res = await fetch(currentUrl, {
+      method: "GET",
+      redirect: "manual",
+      headers: {
+        Accept: "text/html,application/xhtml+xml",
+        "User-Agent": UA,
+      },
+      signal: AbortSignal.timeout(FETCH_MS),
+    });
+
+    if (!isRedirect(res.status)) {
+      return { res, finalUrl: currentUrl };
+    }
+
+    if (redirectCount === MAX_REDIRECTS) {
+      throw new Error("too_many_redirects");
+    }
+
+    const location = res.headers.get("location");
+    if (!location) {
+      throw new Error("invalid_redirect");
+    }
+
+    const nextUrl = new URL(location, currentUrl);
+    if (nextUrl.protocol !== "http:" && nextUrl.protocol !== "https:") {
+      throw new Error("invalid_redirect");
+    }
+    currentUrl = nextUrl.toString();
+  }
+
+  throw new Error("too_many_redirects");
+}
+
+async function assertSafeDestination(inputUrl: string) {
+  const url = new URL(inputUrl);
+  const host = url.hostname;
+  if (isBlockedHost(host)) {
+    throw new Error(BLOCKED_ERROR);
+  }
+
+  const resolved = await lookup(host, { all: true, verbatim: true });
+  if (resolved.some((entry) => isBlockedAddress(entry.address))) {
+    throw new Error(BLOCKED_ERROR);
+  }
+}
+
+function isRedirect(status: number): boolean {
+  return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+}
+
+async function readLimitedText(res: Response): Promise<string> {
+  if (!res.body) {
+    return "";
+  }
+
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      const remaining = MAX_BYTES - total;
+      if (remaining <= 0) {
+        await reader.cancel();
+        break;
+      }
+
+      if (value.byteLength > remaining) {
+        chunks.push(value.slice(0, remaining));
+        total += remaining;
+        await reader.cancel();
+        break;
+      }
+
+      chunks.push(value);
+      total += value.byteLength;
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return new TextDecoder("utf-8", { fatal: false }).decode(joinChunks(chunks, total));
+}
+
+function joinChunks(chunks: Uint8Array[], total: number): Uint8Array {
+  const joined = new Uint8Array(total);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    joined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return joined;
 }

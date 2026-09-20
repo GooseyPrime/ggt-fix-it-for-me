@@ -10,14 +10,21 @@ export const runtime = "nodejs";
  * Refuses when fix-it is not on the shop allowlist (no fallthrough to seo-audit).
  */
 export async function POST(request: Request) {
-  let body: { url?: unknown; variant?: unknown; returnUrl?: unknown };
+  let body: { url?: unknown; variant?: unknown; returnUrl?: unknown } | null = null;
   try {
-    body = (await request.json()) as {
-      url?: unknown;
-      variant?: unknown;
-      returnUrl?: unknown;
-    };
+    const parsed = await request.json();
+    if (parsed && typeof parsed === "object") {
+      body = parsed as {
+        url?: unknown;
+        variant?: unknown;
+        returnUrl?: unknown;
+      };
+    }
   } catch {
+    /* handled below */
+  }
+
+  if (!body) {
     return NextResponse.json({ ok: false, message: "Send a JSON body." }, { status: 400 });
   }
 
@@ -28,9 +35,12 @@ export async function POST(request: Request) {
   if (!returnUrl) {
     return NextResponse.json({ ok: false, message: "Missing return URL." }, { status: 400 });
   }
+  if (!url) {
+    return NextResponse.json({ ok: false, message: "Missing website URL." }, { status: 400 });
+  }
 
   const result = await startSale({
-    url: url || "https://example.com",
+    url,
     variant,
     returnUrl,
   });

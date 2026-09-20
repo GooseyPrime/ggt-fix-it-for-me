@@ -4,10 +4,17 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  let body: { url?: unknown; description?: unknown };
+  let body: { url?: unknown; description?: unknown } | null = null;
   try {
-    body = (await request.json()) as { url?: unknown; description?: unknown };
+    const parsed = await request.json();
+    if (parsed && typeof parsed === "object") {
+      body = parsed as { url?: unknown; description?: unknown };
+    }
   } catch {
+    /* handled below */
+  }
+
+  if (!body) {
     return NextResponse.json(
       { ok: false, message: "Send a JSON body with a URL and/or description." },
       { status: 400 },

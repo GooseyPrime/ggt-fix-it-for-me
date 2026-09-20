@@ -11,15 +11,18 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  let body: { sessionId?: unknown; session_id?: unknown } = {};
+  let body: { sessionId?: unknown; session_id?: unknown } | null = null;
   try {
-    body = (await request.json()) as { sessionId?: unknown; session_id?: unknown };
+    const parsed = await request.json();
+    if (parsed && typeof parsed === "object") {
+      body = parsed as { sessionId?: unknown; session_id?: unknown };
+    }
   } catch {
     /* empty */
   }
   const sessionId =
-    (typeof body.sessionId === "string" && body.sessionId) ||
-    (typeof body.session_id === "string" && body.session_id) ||
+    (body && typeof body.sessionId === "string" && body.sessionId) ||
+    (body && typeof body.session_id === "string" && body.session_id) ||
     "";
   const result = await verifySale(sessionId);
   return NextResponse.json(result, { status: result.paid ? 200 : 400 });

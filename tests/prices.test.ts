@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { anyPriceConfigured, readPriceCents, shopPrices, variantPrice } from "@/lib/prices";
+import {
+  anyPriceConfigured,
+  formatUsdFromCents,
+  readPriceCents,
+  shopPrices,
+  variantPrice,
+} from "@/lib/prices";
 
 describe("prices", () => {
   it("never invents amounts when env is empty", () => {
@@ -20,5 +26,9 @@ describe("prices", () => {
     });
     expect(variantPrice(prices, "standard")?.label).toMatch(/\$149/);
     expect(variantPrice(prices, "plus")?.label).toMatch(/\$249/);
+  });
+
+  it("preserves cents when formatting non-whole-dollar prices", () => {
+    expect(formatUsdFromCents(14950)).toBe("$149.50");
   });
 });

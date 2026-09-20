@@ -111,26 +111,39 @@ export async function verifySale(sessionId: string): Promise<VerifyResult> {
 
   const getUrl = new URL(`${origin}/api/verify`);
   getUrl.searchParams.set("session_id", sessionId);
-  const getRes = await fetch(getUrl.toString(), {
+  getUrl.searchParams.set("product", TOOL_ID);
+  getUrl.searchParams.set("toolId", TOOL_ID);
+  const getBody = await fetchJson(getUrl.toString(), {
     method: "GET",
     headers: { Accept: "application/json" },
   });
-  const getBody = await readJson(getRes);
-  if (isVerifyShape(getBody)) return normalizeVerify(getBody, sessionId);
+  if (getBody.ok && isVerifyShape(getBody.body)) return normalizeVerify(getBody.body, sessionId);
 
-  const postRes = await fetch(`${origin}/api/verify`, {
+  const postBody = await fetchJson(`${origin}/api/verify`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ sessionId, session_id: sessionId }),
+    body: JSON.stringify({
+      sessionId,
+      session_id: sessionId,
+      product: TOOL_ID,
+      toolId: TOOL_ID,
+    }),
   });
-  const postBody = await readJson(postRes);
-  if (isVerifyShape(postBody)) return normalizeVerify(postBody, sessionId);
+  if (postBody.ok && isVerifyShape(postBody.body)) return normalizeVerify(postBody.body, sessionId);
+  if (!getBody.ok && !postBody.ok) {
+    return {
+      ok: false,
+      paid: false,
+      kind: "shop_error",
+      message: "Could not reach the shop payment desk.",
+    };
+  }
 
   return {
     ok: false,
     paid: false,
     kind: "invalid_response",
-    message: "The shop did not confirm this sale.",
+    message: "The shop did not confirm this Fix It sale.",
   };
 }
 
@@ -189,20 +202,45 @@ function isVerifyShape(value: unknown): value is Record<string, unknown> {
 
 function normalizeVerify(data: Record<string, unknown>, sessionId: string): VerifyResult {
   const paymentStatus = asString(data.paymentStatus) ?? asString(data.payment_status);
-  // Unlock when ok && paid, or $0 promo: paymentStatus "no_payment_required"
+  const toolMatched = matchesTool(data);
   const paidFlag = data.paid === true;
   const zeroPromo = paymentStatus === "no_payment_required";
   const okFlag = data.ok === true;
-  const paid = (okFlag && paidFlag) || (okFlag && zeroPromo) || paidFlag || zeroPromo;
+  const paid = toolMatched && (zeroPromo || (okFlag && paidFlag));
+  const ok = toolMatched && (okFlag || zeroPromo);
 
   return {
-    ok: okFlag || paid,
+    ok,
     paid,
-    kind: asString(data.kind),
-    message: asString(data.message),
+    kind: toolMatched ? asString(data.kind) : "invalid_product",
+    message:
+      toolMatched
+        ? asString(data.message)
+        : "The shop did not confirm this Fix It sale.",
     sessionId: asString(data.sessionId) ?? asString(data.session_id) ?? sessionId,
     paymentStatus,
   };
+}
+
+function matchesTool(data: Record<string, unknown>): boolean {
+  const metadata = asRecord(data.metadata);
+  const product =
+    asString(data.product) ??
+    asString(data.product_id) ??
+    asString(data.productId) ??
+    asString(metadata?.product) ??
+    asString(metadata?.product_id) ??
+    asString(metadata?.productId);
+  const toolId =
+    asString(data.toolId) ??
+    asString(data.tool_id) ??
+    asString(metadata?.toolId) ??
+    asString(metadata?.tool_id);
+
+  if (!product && !toolId) return false;
+  if (product && product !== TOOL_ID) return false;
+  if (toolId && toolId !== TOOL_ID) return false;
+  return true;
 }
 
 async function readJson(res: Response): Promise<unknown> {
@@ -217,4 +255,20 @@ async function readJson(res: Response): Promise<unknown> {
 
 function asString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
+async function fetchJson(
+  input: string,
+  init: RequestInit,
+): Promise<{ ok: true; body: unknown } | { ok: false }> {
+  try {
+    const res = await fetch(input, init);
+    return { ok: true, body: await readJson(res) };
+  } catch {
+    return { ok: false };
+  }
 }

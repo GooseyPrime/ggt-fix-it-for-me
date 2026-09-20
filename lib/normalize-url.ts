@@ -18,6 +18,10 @@ export type NormalizedUrl = {
   error?: string;
 };
 
+export function canonicalizeHost(host: string): string {
+  return host.trim().toLowerCase().replace(/\.+$/, "");
+}
+
 export function extractUrlCandidate(raw: string): string {
   const stripped = raw.replace(WRAPS, "").replace(/\u00a0/g, " ").trim();
   if (!stripped) return "";
@@ -28,13 +32,17 @@ export function extractUrlCandidate(raw: string): string {
 }
 
 export function isBlockedHost(host: string): boolean {
-  const h = host.toLowerCase();
+  const h = canonicalizeHost(host);
   if (BLOCKED_HOSTS.has(h)) return true;
   if (h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".internal")) {
     return true;
   }
-  if (isPrivateIpv4(h)) return true;
+  if (isPrivateIpv4(h) || isPrivateIpv6(h)) return true;
   return false;
+}
+
+export function isBlockedAddress(address: string): boolean {
+  return isPrivateIpv4(address) || isPrivateIpv6(address);
 }
 
 function isPrivateIpv4(host: string): boolean {
@@ -48,6 +56,21 @@ function isPrivateIpv4(host: string): boolean {
   if (a === 169 && b === 254) return true;
   if (a === 192 && b === 168) return true;
   if (a === 172 && b !== undefined && b >= 16 && b <= 31) return true;
+  return false;
+}
+
+function isPrivateIpv6(host: string): boolean {
+  const normalized = canonicalizeHost(host);
+  if (normalized === "::1") return true;
+  const mappedIpv4 = normalized.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i)?.[1];
+  if (mappedIpv4) return isPrivateIpv4(mappedIpv4);
+
+  const first = normalized.split(":")[0];
+  if (!first || !/^[\da-f]{1,4}$/i.test(first)) return false;
+  const value = Number.parseInt(first, 16);
+  if (!Number.isFinite(value)) return false;
+  if ((value & 0xfe00) === 0xfc00) return true;
+  if ((value & 0xffc0) === 0xfe80) return true;
   return false;
 }
 
@@ -83,11 +106,12 @@ export function normalizeUrl(raw: string): NormalizedUrl {
     };
   }
 
-  const host = parsed.hostname.toLowerCase();
+  const host = canonicalizeHost(parsed.hostname);
   if (isBlockedHost(host)) {
     return { href: null, host: null, error: "That address cannot be checked from this tool." };
   }
 
+  parsed.hostname = host;
   parsed.hash = "";
   const href = parsed.toString();
   const note =

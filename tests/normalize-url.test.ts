@@ -11,6 +11,8 @@ describe("normalizeUrl", () => {
   it("blocks private hosts", () => {
     expect(normalizeUrl("http://127.0.0.1/").error).toBeTruthy();
     expect(normalizeUrl("http://localhost/").error).toBeTruthy();
+    expect(normalizeUrl("http://127.0.0.1./").error).toBeTruthy();
+    expect(normalizeUrl("https://metadata.google.internal./").error).toBeTruthy();
     expect(isBlockedHost("192.168.1.1")).toBe(true);
     expect(isBlockedHost("10.0.0.5")).toBe(true);
   });

@@ -1,12 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ACCENT, TOOL_NAME, fixItSaleLive } from "@/lib/config";
+import { ACCENT, TOOL_NAME, fixItSaleLive, publicBasePath } from "@/lib/config";
 import { anyPriceConfigured, shopPrices, variantPrice } from "@/lib/prices";
-import type { AuditResult, Bucket, VariantId } from "@/lib/types";
+import type { AuditResult, Bucket, PriceTiers, VariantId } from "@/lib/types";
 
 import { BucketColumn } from "./BucketColumn";
 import { FixItOutcome } from "./FixItOutcome";
+
+const AUDIT_STORAGE_KEY = "ggt.fix-it.audit";
+
+export function buildApiUrl(path: string, basePath = publicBasePath()): string {
+  const prefix = basePath.replace(/\/$/, "");
+  return `${prefix}${path}`;
+}
+
+export function defaultVariantId(prices: PriceTiers): VariantId {
+  if (prices.standardCents != null) return "standard";
+  if (prices.plusCents != null) return "plus";
+  return "standard";
+}
 
 export function FixItApp() {
   const [url, setUrl] = useState("");
@@ -15,11 +28,13 @@ export function FixItApp() {
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<AuditResult | null>(null);
-  const [variant, setVariant] = useState<VariantId>("standard");
+  const prices = useMemo(() => shopPrices(), []);
+  const basePath = useMemo(() => publicBasePath(), []);
+  const initialVariant = useMemo(() => defaultVariantId(prices), [prices]);
+  const [variant, setVariant] = useState<VariantId>(initialVariant);
   const [unlocked, setUnlocked] = useState(false);
   const [unlockNote, setUnlockNote] = useState("");
 
-  const prices = useMemo(() => shopPrices(), []);
   const saleLive = useMemo(() => fixItSaleLive(), []);
   const standard = variantPrice(prices, "standard");
   const plus = variantPrice(prices, "plus");
@@ -27,13 +42,18 @@ export function FixItApp() {
   const selected = variantPrice(prices, variant);
 
   useEffect(() => {
+    const saved = readStoredAudit();
+    if (saved) {
+      setResult(saved);
+    }
+
     const params = new URLSearchParams(window.location.search);
     const sessionId = params.get("session_id") || params.get("sessionId");
     if (!sessionId) return;
 
     void (async () => {
       try {
-        const res = await fetch("/api/verify", {
+        const res = await fetch(buildApiUrl("/api/verify", basePath), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sessionId }),
@@ -58,7 +78,25 @@ export function FixItApp() {
         setError("Could not verify the checkout session.");
       }
     })();
-  }, []);
+  }, [basePath]);
+
+  useEffect(() => {
+    if (!variantPrice(prices, variant)) {
+      setVariant(initialVariant);
+    }
+  }, [initialVariant, prices, variant]);
+
+  useEffect(() => {
+    try {
+      if (result) {
+        window.sessionStorage.setItem(AUDIT_STORAGE_KEY, JSON.stringify(result));
+      } else {
+        window.sessionStorage.removeItem(AUDIT_STORAGE_KEY);
+      }
+    } catch {
+      /* ignore storage failures */
+    }
+  }, [result]);
 
   async function onAudit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,7 +104,7 @@ export function FixItApp() {
     setResult(null);
     setBusy(true);
     try {
-      const res = await fetch("/api/audit", {
+      const res = await fetch(buildApiUrl("/api/audit", basePath), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url, description }),
@@ -92,7 +130,7 @@ export function FixItApp() {
     setPaying(true);
     try {
       const returnUrl = window.location.href.split("?")[0] ?? "/";
-      const res = await fetch("/api/sale", {
+      const res = await fetch(buildApiUrl("/api/sale", basePath), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -205,4 +243,18 @@ export function FixItApp() {
       </div>
     </main>
   );
+}
+
+function readStoredAudit(): AuditResult | null {
+  try {
+    const raw = window.sessionStorage.getItem(AUDIT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || !Array.isArray((parsed as AuditResult).findings)) {
+      return null;
+    }
+    return parsed as AuditResult;
+  } catch {
+    return null;
+  }
 }
