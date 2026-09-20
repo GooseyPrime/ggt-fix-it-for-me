@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 export async function GET(request: Request) {
   const sessionId = new URL(request.url).searchParams.get("session_id") ?? "";
   const result = await verifySale(sessionId);
-  return NextResponse.json(result, { status: result.paid ? 200 : 400 });
+  return NextResponse.json(result, { status: statusForVerify(result) });
 }
 
 export async function POST(request: Request) {
@@ -25,5 +25,9 @@ export async function POST(request: Request) {
     (body && typeof body.session_id === "string" && body.session_id) ||
     "";
   const result = await verifySale(sessionId);
-  return NextResponse.json(result, { status: result.paid ? 200 : 400 });
+  return NextResponse.json(result, { status: statusForVerify(result) });
+}
+
+function statusForVerify(result: Awaited<ReturnType<typeof verifySale>>): number {
+  return result.kind === "invalid_request" ? 400 : 200;
 }

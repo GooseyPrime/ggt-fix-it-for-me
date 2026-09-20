@@ -27,7 +27,7 @@ export function extractUrlCandidate(raw: string): string {
   if (!stripped) return "";
   const match = stripped.match(DOMAIN);
   if (match?.[0]) return match[0];
-  const firstToken = stripped.split(/\s+/)[0] ?? "";
+  const firstToken = firstWhitespaceToken(stripped);
   return trimTrailingPunctuation(firstToken);
 }
 
@@ -126,4 +126,21 @@ function trimTrailingPunctuation(value: string): string {
     end -= 1;
   }
   return value.slice(0, end);
+}
+
+function firstWhitespaceToken(value: string): string {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (
+      code === 9 ||
+      code === 10 ||
+      code === 11 ||
+      code === 12 ||
+      code === 13 ||
+      code === 32
+    ) {
+      return value.slice(0, index);
+    }
+  }
+  return value;
 }

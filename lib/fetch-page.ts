@@ -158,7 +158,8 @@ async function readLimitedText(res: Response): Promise<string> {
     reader.releaseLock();
   }
 
-  return new TextDecoder("utf-8", { fatal: false }).decode(joinChunks(chunks, total));
+  const bytes = trimIncompleteUtf8(joinChunks(chunks, total));
+  return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
 }
 
 function joinChunks(chunks: Uint8Array[], total: number): Uint8Array {
@@ -171,4 +172,35 @@ function joinChunks(chunks: Uint8Array[], total: number): Uint8Array {
   }
 
   return joined;
+}
+
+function trimIncompleteUtf8(bytes: Uint8Array): Uint8Array {
+  let start = bytes.length - 1;
+  while (start >= 0 && isContinuationByte(bytes[start])) {
+    start -= 1;
+  }
+
+  if (start < 0) return new Uint8Array();
+
+  const expectedLength = utf8SequenceLength(bytes[start]);
+  if (expectedLength === 0) return bytes.slice(0, start);
+  if (expectedLength === 1) return bytes;
+
+  const actualLength = bytes.length - start;
+  if (actualLength < expectedLength) {
+    return bytes.slice(0, start);
+  }
+  return bytes;
+}
+
+function utf8SequenceLength(byte: number): number {
+  if ((byte & 0b1000_0000) === 0) return 1;
+  if ((byte & 0b1110_0000) === 0b1100_0000) return 2;
+  if ((byte & 0b1111_0000) === 0b1110_0000) return 3;
+  if ((byte & 0b1111_1000) === 0b1111_0000) return 4;
+  return 0;
+}
+
+function isContinuationByte(byte: number): boolean {
+  return (byte & 0b1100_0000) === 0b1000_0000;
 }
