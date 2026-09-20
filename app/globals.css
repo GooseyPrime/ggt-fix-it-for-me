@@ -1,0 +1,150 @@
+@import "ggt-design-kit/src/index.css";
+
+:root {
+  /* Ember — Fix It For Me accent */
+  --ggt-accent: #b4553f;
+}
+
+html,
+body {
+  margin: 0;
+}
+
+.fifm-field {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  max-width: 640px;
+}
+
+.fifm-label {
+  color: var(--ggt-mist);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fifm-textarea {
+  min-height: 96px;
+  padding: 14px 16px;
+  border: 1px solid var(--ggt-hairline);
+  border-radius: var(--ggt-radius-md, 8px);
+  background: var(--ggt-ink);
+  color: var(--ggt-paper);
+  font: inherit;
+  resize: vertical;
+}
+
+.fifm-textarea:focus-visible {
+  outline: 2px solid var(--ggt-accent);
+  outline-offset: 2px;
+}
+
+.fifm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.fifm-error {
+  margin-top: 12px;
+  color: #e8a090;
+  font-size: 0.95rem;
+}
+
+.fifm-note {
+  margin-top: 10px;
+  color: var(--ggt-mist);
+  font-size: 0.95rem;
+}
+
+.fifm-pill {
+  display: inline-block;
+  margin: 0 0 8px;
+  color: var(--ggt-accent);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fifm-buckets {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+@media (min-width: 900px) {
+  .fifm-buckets {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.fifm-bucket h3 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+}
+
+.fifm-bucket ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fifm-bucket li {
+  padding: 12px 0;
+  border-top: 1px solid var(--ggt-hairline);
+}
+
+.fifm-bucket li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.fifm-reason {
+  margin: 6px 0 0;
+  color: var(--ggt-mist);
+  font-size: 0.92rem;
+}
+
+.fifm-tier {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.fifm-tier label {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  color: var(--ggt-paper);
+}
+
+.fifm-unlocked {
+  margin-top: 20px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--ggt-accent) 45%, var(--ggt-hairline));
+  border-radius: var(--ggt-radius-lg, 12px);
+  background: var(--ggt-ink);
+}
+
+.fifm-unlocked h2 {
+  margin: 0 0 8px;
+}
+
+.fifm-unlocked ol {
+  margin: 10px 0 0;
+  padding-left: 1.2rem;
+}
+
+.fifm-unlocked li + li {
+  margin-top: 8px;
+}
+
+.fifm-disclaimer {
+  margin-top: 16px;
+  color: var(--ggt-mist);
+  font-size: 0.92rem;
+}
