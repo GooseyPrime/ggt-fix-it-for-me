@@ -1,18 +1,8 @@
 @import "ggt-design-kit/src/index.css";
 
-:root {
-  /* Ember — Fix It For Me accent */
-  --ggt-accent: #b4553f;
-}
-
 html,
 body {
   margin: 0;
-}
-
-/* The shared eyebrow uses the accent colour, which is too dark on this tool's background. */
-.ggt-eyebrow {
-  color: #e59a85;
 }
 
 .fifm-field {
@@ -68,7 +58,7 @@ body {
 .fifm-pill {
   display: inline-block;
   margin: 0 0 8px;
-  color: #e59a85;
+  color: var(--ggt-accent-text, var(--ggt-accent));
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 11px;
   letter-spacing: 0.12em;
@@ -168,7 +158,7 @@ body {
 .fifm-warning {
   margin: 14px 0 0;
   padding: 12px 14px;
-  border: 1px solid #e59a85;
+  border: 1px solid var(--ggt-accent-text, var(--ggt-accent));
   border-radius: var(--ggt-radius-md, 8px);
   color: var(--ggt-paper);
   max-width: 640px;
