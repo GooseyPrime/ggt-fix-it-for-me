@@ -1,33 +1,16 @@
-import { verifySale } from "@/lib/payments";
 import { NextResponse } from "next/server";
+import { verifySale } from "@/lib/payments";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-/** Proxies shop GET /api/verify?session_id= or POST { sessionId }. Unlock when paid (incl. $0 promo). */
+/** Confirms a shop checkout is paid for Fix It For Me, and which plan it was. */
 export async function GET(request: Request) {
   const sessionId = new URL(request.url).searchParams.get("session_id") ?? "";
   const result = await verifySale(sessionId);
-  return NextResponse.json(result, { status: statusForVerify(result) });
-}
-
-export async function POST(request: Request) {
-  let body: { sessionId?: unknown; session_id?: unknown } | null = null;
-  try {
-    const parsed = await request.json();
-    if (parsed && typeof parsed === "object") {
-      body = parsed as { sessionId?: unknown; session_id?: unknown };
-    }
-  } catch {
-    /* empty */
-  }
-  const sessionId =
-    (body && typeof body.sessionId === "string" && body.sessionId) ||
-    (body && typeof body.session_id === "string" && body.session_id) ||
-    "";
-  const result = await verifySale(sessionId);
-  return NextResponse.json(result, { status: statusForVerify(result) });
-}
-
-function statusForVerify(result: Awaited<ReturnType<typeof verifySale>>): number {
-  return result.kind === "invalid_request" ? 400 : 200;
+  const { receiptEmail: _omit, ...publicResult } = result;
+  void _omit;
+  return NextResponse.json(publicResult, {
+    status: result.paid ? 200 : result.retryable ? 503 : 402,
+  });
 }

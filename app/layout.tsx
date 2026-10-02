@@ -18,7 +18,7 @@ const mono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Golden Goose Tools — Fix It For Me",
   description:
-    "Free audit with a three-way split: included, needs your decision, or not possible on your platform. Paid unlocks via the shop sale desk.",
+    "Free website audit that sorts every finding into what we can fix, what needs your decision, and what your platform will not allow. Hire us to make the fixes.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

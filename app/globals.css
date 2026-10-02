@@ -10,6 +10,11 @@ body {
   margin: 0;
 }
 
+/* The shared eyebrow uses the accent colour, which is too dark on this tool's background. */
+.ggt-eyebrow {
+  color: #e59a85;
+}
+
 .fifm-field {
   display: grid;
   gap: 8px;
@@ -63,7 +68,7 @@ body {
 .fifm-pill {
   display: inline-block;
   margin: 0 0 8px;
-  color: var(--ggt-accent);
+  color: #e59a85;
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 11px;
   letter-spacing: 0.12em;
@@ -147,4 +152,28 @@ body {
   margin-top: 16px;
   color: var(--ggt-mist);
   font-size: 0.92rem;
+}
+
+.fifm-tier {
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.fifm-tier legend {
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.fifm-warning {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border: 1px solid #e59a85;
+  border-radius: var(--ggt-radius-md, 8px);
+  color: var(--ggt-paper);
+  max-width: 640px;
+}
+
+.fifm-error {
+  color: #f0b3a3;
 }
