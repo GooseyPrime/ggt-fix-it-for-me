@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ACCENT, TOOL_NAME, fixItSaleLive, publicBasePath } from "@/lib/config";
-import { anyPriceConfigured, shopPrices, variantPrice } from "@/lib/prices";
+import { ACCENT, TOOL_NAME, publicBasePath } from "@/lib/config";
+import { shopPrices, variantPrice } from "@/lib/prices";
 import type { AuditResult, Bucket, PriceTiers, VariantId } from "@/lib/types";
 
 import { BucketColumn } from "./BucketColumn";
 import { FixItOutcome } from "./FixItOutcome";
+import { IntakePanel, type PaidSession } from "./IntakePanel";
 
 const AUDIT_STORAGE_KEY = "ggt.fix-it.audit";
+const SESSION_STORAGE_KEY = "ggt.fix-it.session";
 
 export function buildApiUrl(path: string, basePath = publicBasePath()): string {
   const prefix = basePath.replace(/\/$/, "");
@@ -33,13 +35,11 @@ export function FixItApp() {
   const basePath = useMemo(() => publicBasePath(), []);
   const initialVariant = useMemo(() => defaultVariantId(prices), [prices]);
   const [variant, setVariant] = useState<VariantId>(initialVariant);
-  const [unlocked, setUnlocked] = useState(false);
-  const [unlockNote, setUnlockNote] = useState("");
+  const [paid, setPaid] = useState<PaidSession | null>(null);
+  const [open, setOpen] = useState<boolean | null>(null);
 
-  const saleLive = useMemo(() => fixItSaleLive(), []);
   const standard = variantPrice(prices, "standard");
   const plus = variantPrice(prices, "plus");
-  const showPrices = anyPriceConfigured(prices);
   const selected = variantPrice(prices, variant);
 
   useEffect(() => {
@@ -48,44 +48,55 @@ export function FixItApp() {
       setResult(saved);
     }
 
+    void (async () => {
+      try {
+        const res = await fetch(buildApiUrl("/api/status", basePath), { cache: "no-store" });
+        const json = (await res.json()) as { open?: boolean };
+        setOpen(json.open === true);
+      } catch {
+        setOpen(false);
+      }
+    })();
+
     const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get("session_id") || params.get("sessionId");
+    const fromUrl = params.get("session_id") || params.get("sessionId");
+    const sessionId = fromUrl || readStoredSession();
     if (!sessionId) return;
 
     void (async () => {
       try {
-        const res = await fetch(buildApiUrl("/api/verify", basePath), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId }),
-        });
+        const res = await fetch(
+          `${buildApiUrl("/api/verify", basePath)}?session_id=${encodeURIComponent(sessionId)}`,
+          { cache: "no-store" },
+        );
         const json = (await res.json()) as {
-          ok?: boolean;
           paid?: boolean;
           message?: string;
-          kind?: string;
+          variant?: VariantId;
+          targetUrl?: string;
         };
-        if (json.paid) {
-          setUnlocked(true);
-          setUnlockNote(
-            json.kind === "local_unlock"
-              ? "Local unlock (dev only)."
-              : "Payment verified by the shop desk.",
-          );
-        } else if (json.message) {
-          setError(json.message);
+        if (json.paid && res.ok) {
+          setPaid({
+            sessionId,
+            variant: json.variant === "plus" ? "plus" : "standard",
+            targetUrl: json.targetUrl,
+          });
+          writeStoredSession(sessionId);
+        } else {
+          clearStoredSession();
+          if (fromUrl) setError(json.message || "We could not confirm that payment.");
         }
       } catch {
-        setError("Could not verify the checkout session.");
+        if (fromUrl) setError("Could not confirm the payment. Please reload this page.");
+      }
+      if (fromUrl) {
+        const clean = new URL(window.location.href);
+        clean.searchParams.delete("session_id");
+        clean.searchParams.delete("sessionId");
+        window.history.replaceState(null, "", clean.pathname + clean.search + clean.hash);
       }
     })();
   }, [basePath]);
-
-  useEffect(() => {
-    if (!variantPrice(prices, variant)) {
-      setVariant(initialVariant);
-    }
-  }, [initialVariant, prices, variant]);
 
   useEffect(() => {
     try {
@@ -133,14 +144,12 @@ export function FixItApp() {
     setError("");
     setPaying(true);
     try {
-      const returnUrl = window.location.href.split("?")[0] ?? "/";
       const res = await fetch(buildApiUrl("/api/sale", basePath), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           url: result?.finalUrl || result?.inputUrl || url,
           variant,
-          returnUrl,
         }),
       });
       const json = (await res.json()) as { ok?: boolean; url?: string; message?: string };
@@ -161,10 +170,19 @@ export function FixItApp() {
           <p className="ggt-eyebrow">Golden Goose Tools</p>
           <h1>{TOOL_NAME}</h1>
           <p className="ggt-lede">
-            Paste a URL or describe what is broken. Free: an honest three-way split — included,
-            needs your decision, or not possible on your platform. We never invent business facts.
+            Paste your website address for a free audit. We sort what we find into three lists: what we
+            can fix for you, what only you can decide, and what your website builder will not allow. If you
+            want us to do the work, you pay once and tell us what you need.
           </p>
         </header>
+
+        {paid ? (
+          <IntakePanel
+            session={paid}
+            intakeUrl={buildApiUrl("/api/intake", basePath)}
+            initialSite={result?.finalUrl || result?.inputUrl || url}
+          />
+        ) : null}
 
         <form onSubmit={onAudit}>
           <div className="fifm-field">
@@ -223,20 +241,19 @@ export function FixItApp() {
               ))}
             </div>
 
-            <FixItOutcome
-              result={result}
-              unlocked={unlocked}
-              unlockNote={unlockNote}
-              showPrices={showPrices}
-              saleLive={saleLive}
-              variant={variant}
-              setVariant={setVariant}
-              standard={standard}
-              plus={plus}
-              selected={selected}
-              paying={paying}
-              onBuy={onBuy}
-            />
+            {paid ? null : (
+              <FixItOutcome
+                result={result}
+                open={open}
+                variant={variant}
+                setVariant={setVariant}
+                standard={standard}
+                plus={plus}
+                selected={selected}
+                paying={paying}
+                onBuy={onBuy}
+              />
+            )}
 
             <p className="fifm-disclaimer">
               This is a practical fix plan, not a promise of rankings, legal compliance, or platform
@@ -260,5 +277,29 @@ function readStoredAudit(): AuditResult | null {
     return parsed as AuditResult;
   } catch {
     return null;
+  }
+}
+
+function readStoredSession(): string {
+  try {
+    return window.localStorage.getItem(SESSION_STORAGE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function writeStoredSession(sessionId: string) {
+  try {
+    window.localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearStoredSession() {
+  try {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch {
+    /* ignore */
   }
 }
