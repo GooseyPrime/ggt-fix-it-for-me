@@ -108,6 +108,30 @@ describe("verifySale", () => {
     expect(result.message).toBe("Payment not completed.");
   });
 
+  it.each([
+    ["missing", { ...paidBody, variant: undefined }],
+    ["unknown", { ...paidBody, variant: "enterprise" }],
+  ])("refuses a paid checkout with a %s plan", async (_label, body) => {
+    stubFetch(200, body);
+    const result = await verifySale("cs_1");
+    expect(result).toMatchObject({
+      paid: false,
+      retryable: true,
+      message: expect.stringMatching(/unsupported plan/i),
+    });
+  });
+
+  it("marks shop outages as retryable", async () => {
+    stubFetch(503, { ok: false, message: "Try again later." });
+    const result = await verifySale("cs_1");
+    expect(result).toMatchObject({ paid: false, retryable: true });
+  });
+
+  it("marks network failures as retryable", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("down")));
+    expect(await verifySale("cs_1")).toMatchObject({ paid: false, retryable: true });
+  });
+
   it("refuses a missing session id without calling the shop", async () => {
     const fetchMock = stubFetch(200, paidBody);
     expect((await verifySale("  ")).paid).toBe(false);

@@ -110,6 +110,17 @@ describe("/api/verify", () => {
     expect(body.variant).toBe("plus");
     expect(JSON.stringify(body)).not.toContain("pay@example.com");
   });
+  it("returns 503 for retryable verification failures", async () => {
+    verifySaleMock.mockResolvedValue({
+      ok: false,
+      paid: false,
+      retryable: true,
+      message: "Could not reach the shop payment desk.",
+    });
+    const res = await verifyGet(new Request("https://t.example/api/verify?session_id=x"));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ retryable: true });
+  });
 });
 
 describe("/api/intake", () => {

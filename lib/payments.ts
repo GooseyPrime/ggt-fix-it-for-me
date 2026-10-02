@@ -8,6 +8,7 @@ export type SaleResult =
 export type VerifyResult = {
   ok: boolean;
   paid: boolean;
+  retryable?: boolean;
   message?: string;
   sessionId?: string;
   variant?: VariantId;
@@ -88,7 +89,22 @@ export async function verifySale(sessionId: string): Promise<VerifyResult> {
       cache: "no-store",
     });
     const data = await readJson(res);
-    if (!data) return { ok: false, paid: false, message: "The shop did not confirm this purchase." };
+    if (res.status === 408 || res.status === 429 || res.status >= 500) {
+      return {
+        ok: false,
+        paid: false,
+        retryable: true,
+        message: (data && asString(data.message)) || "The shop could not confirm this purchase. Please try again.",
+      };
+    }
+    if (!data) {
+      return {
+        ok: false,
+        paid: false,
+        retryable: true,
+        message: "The shop did not confirm this purchase.",
+      };
+    }
     const product = asString(data.product) ?? asString(data.productId);
     const toolId = asString(data.toolId);
     const paidFlag = data.paid === true || asString(data.paymentStatus) === "no_payment_required";
@@ -105,7 +121,15 @@ export async function verifySale(sessionId: string): Promise<VerifyResult> {
       };
     }
     const rawVariant = asString(data.variant);
-    const variant: VariantId = rawVariant === "plus" ? "plus" : "standard";
+    if (rawVariant !== "standard" && rawVariant !== "plus") {
+      return {
+        ok: false,
+        paid: false,
+        retryable: true,
+        message: "The shop returned an unsupported plan.",
+      };
+    }
+    const variant: VariantId = rawVariant;
     return {
       ok: true,
       paid: true,
@@ -115,6 +139,6 @@ export async function verifySale(sessionId: string): Promise<VerifyResult> {
       receiptEmail: asString(data.email),
     };
   } catch {
-    return { ok: false, paid: false, message: "Could not reach the shop payment desk." };
+    return { ok: false, paid: false, retryable: true, message: "Could not reach the shop payment desk." };
   }
 }

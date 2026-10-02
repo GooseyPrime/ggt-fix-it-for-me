@@ -10,5 +10,7 @@ export async function GET(request: Request) {
   const result = await verifySale(sessionId);
   const { receiptEmail: _omit, ...publicResult } = result;
   void _omit;
-  return NextResponse.json(publicResult, { status: result.paid ? 200 : 402 });
+  return NextResponse.json(publicResult, {
+    status: result.paid ? 200 : result.retryable ? 503 : 402,
+  });
 }

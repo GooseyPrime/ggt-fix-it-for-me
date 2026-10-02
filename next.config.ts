@@ -1,10 +1,11 @@
 import type { NextConfig } from "next";
+import { normalizeBasePath } from "./lib/config";
 
 /**
  * Served on the shop at goldengoosetools.com/tools/fix-it
  * (the shop proxies this deployment under the same path).
  */
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "/tools/fix-it";
+const basePath = normalizeBasePath(process.env.NEXT_PUBLIC_BASE_PATH ?? "/tools/fix-it");
 
 const nextConfig: NextConfig = {
   basePath: basePath || undefined,

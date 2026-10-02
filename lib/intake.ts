@@ -73,10 +73,12 @@ export function checkIntake(input: IntakeInput): IntakeCheck {
     };
   }
 
-  if (looksLikePassword(whatToFix) || looksLikePassword(accessNotes)) {
+  const passwordInWhatToFix = looksLikePassword(whatToFix);
+  const passwordInAccessNotes = looksLikePassword(accessNotes);
+  if (passwordInWhatToFix || passwordInAccessNotes) {
     return {
       ok: false,
-      field: "accessNotes",
+      field: passwordInWhatToFix ? "whatToFix" : "accessNotes",
       message:
         "This looks like it contains a password. Please remove it. We will never ask you to send one; we will tell you how to give access safely.",
     };

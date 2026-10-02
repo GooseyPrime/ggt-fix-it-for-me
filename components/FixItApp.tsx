@@ -71,6 +71,7 @@ export function FixItApp() {
         );
         const json = (await res.json()) as {
           paid?: boolean;
+          retryable?: boolean;
           message?: string;
           variant?: VariantId;
           targetUrl?: string;
@@ -82,18 +83,16 @@ export function FixItApp() {
             targetUrl: json.targetUrl,
           });
           writeStoredSession(sessionId);
+          cleanCheckoutUrl(fromUrl);
         } else {
-          clearStoredSession();
+          if (!json.retryable) {
+            clearStoredSession();
+            cleanCheckoutUrl(fromUrl);
+          }
           if (fromUrl) setError(json.message || "We could not confirm that payment.");
         }
       } catch {
         if (fromUrl) setError("Could not confirm the payment. Please reload this page.");
-      }
-      if (fromUrl) {
-        const clean = new URL(window.location.href);
-        clean.searchParams.delete("session_id");
-        clean.searchParams.delete("sessionId");
-        window.history.replaceState(null, "", clean.pathname + clean.search + clean.hash);
       }
     })();
   }, [basePath]);
@@ -302,4 +301,12 @@ function clearStoredSession() {
   } catch {
     /* ignore */
   }
+}
+
+function cleanCheckoutUrl(fromUrl: string | null) {
+  if (!fromUrl) return;
+  const clean = new URL(window.location.href);
+  clean.searchParams.delete("session_id");
+  clean.searchParams.delete("sessionId");
+  window.history.replaceState(null, "", clean.pathname + clean.search + clean.hash);
 }

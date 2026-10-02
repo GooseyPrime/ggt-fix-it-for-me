@@ -53,6 +53,12 @@ describe("checkIntake", () => {
     expect(checkIntake({ ...GOOD, whatToFix: "Fix the header. pwd=abc12345" }).ok).toBe(false);
   });
 
+  it("reports the field containing a password", () => {
+    const r = checkIntake({ ...GOOD, whatToFix: "Fix titles; password: abc12345" });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.field).toBe("whatToFix");
+  });
+
   it("does not trip on the word password in ordinary text", () => {
     expect(looksLikePassword("I forgot who owns the account and the password reset page is broken")).toBe(false);
     expect(looksLikePassword("Please do not send a password")).toBe(false);
