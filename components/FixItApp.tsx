@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ACCENT, TOOL_NAME, publicBasePath } from "@/lib/config";
+import { TOOL_NAME, publicBasePath } from "@/lib/config";
 import { shopPrices, variantPrice } from "@/lib/prices";
 import type { AuditResult, Bucket, PriceTiers, VariantId } from "@/lib/types";
 
@@ -163,7 +163,7 @@ export function FixItApp() {
   }
 
   return (
-    <main className="ggt-root" style={{ ["--ggt-accent" as string]: ACCENT }}>
+    <main className="ggt-root">
       <div className="ggt-wrap">
         <header className="ggt-hero">
           <p className="ggt-eyebrow">Golden Goose Tools</p>
