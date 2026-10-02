@@ -44,7 +44,7 @@ describe("checkIntake", () => {
   });
 
   it("rejects pasted passwords", () => {
-    const r = checkIntake({ ...GOOD, accessNotes: "login is admin, password: Tr0ub4dor" });
+    const r = checkIntake({ ...GOOD, accessNotes: "login is admin, password: test-placeholder" });
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.field).toBe("accessNotes");
