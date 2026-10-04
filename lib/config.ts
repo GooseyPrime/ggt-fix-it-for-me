@@ -2,9 +2,6 @@
 export const TOOL_ID = "fix-it";
 export const TOOL_PATH = "/tools/fix-it";
 export const TOOL_NAME = "Fix It For Me";
-/** Ember accent. */
-export const ACCENT = "#b4553f";
-
 export const DEFAULT_SHOP_ORIGIN = "https://www.goldengoosetools.com";
 
 type Env = Record<string, string | undefined>;
