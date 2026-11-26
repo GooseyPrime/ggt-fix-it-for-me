@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { TOOL_NAME, publicBasePath } from "@/lib/config";
+import { buildApiUrl, defaultVariantId } from "@/lib/fix-it-app";
 import { shopPrices, variantPrice } from "@/lib/prices";
-import type { AuditResult, Bucket, PriceTiers, VariantId } from "@/lib/types";
+import type { AuditResult, Bucket, VariantId } from "@/lib/types";
 
 import { BucketColumn } from "./BucketColumn";
 import { FixItOutcome } from "./FixItOutcome";
@@ -11,17 +12,6 @@ import { IntakePanel, type PaidSession } from "./IntakePanel";
 
 const AUDIT_STORAGE_KEY = "ggt.fix-it.audit";
 const SESSION_STORAGE_KEY = "ggt.fix-it.session";
-
-export function buildApiUrl(path: string, basePath = publicBasePath()): string {
-  const prefix = basePath.replace(/\/$/, "");
-  return `${prefix}${path}`;
-}
-
-export function defaultVariantId(prices: PriceTiers): VariantId {
-  if (prices.standardCents != null) return "standard";
-  if (prices.plusCents != null) return "plus";
-  return "standard";
-}
 
 export function FixItApp() {
   const resultsRef = useRef<HTMLElement | null>(null);

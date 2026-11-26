@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildApiUrl, defaultVariantId } from "@/components/FixItApp";
+import { buildApiUrl, defaultVariantId } from "@/lib/fix-it-app";
 
 describe("FixItApp helpers", () => {
   it("prefixes API calls with the configured base path", () => {
